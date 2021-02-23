@@ -5,10 +5,10 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="dictionizr",
-    version="0.0.2",
+    version="1.0.0",
     author="Joseph Riddle",
     author_email="joeriddles10@gmail.com",
-    description="A small example package",
+    description="A small package to convert custom python objects to dictionaries and back again",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/joeriddles/dictionizr",

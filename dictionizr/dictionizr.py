@@ -20,6 +20,8 @@ def dictionize(data) -> dict:
     for key, value in output.items():
         if hasattr(value, '__dict__'):
             output[key] = dictionize(value)
+        elif isinstance(value, tuple):
+            output[key] = list(value)
 
     output = {
         key: value
@@ -48,22 +50,25 @@ def undictionize(data: dict, class_: Optional[Type] = None):
     if class_ is not None and hasattr(class_.__init__, '__code__'):
         init_signature = inspect.signature(class_.__init__)
         init_parameters = init_signature.parameters
-        init_args = []
+        positional_args = []
+        keyword_args = {}
         for param in init_parameters.values():
             if param.name == 'self':
                 continue
 
-            if param.kind == param.POSITIONAL_ONLY:
+            # See: https://docs.python.org/3/library/inspect.html#inspect.Parameter.kind
+            if param.kind == param.POSITIONAL_OR_KEYWORD or param.kind == param.POSITIONAL_ONLY:
                 value = data.pop(param.name, param.default)
-                init_args.append(value)
+                positional_args.append(value)
+            elif param.kind == param.KEYWORD_ONLY:
+                value = data.pop(param.name, param.default)
+                keyword_args[param.name] = value
+            elif param.kind == param.VAR_POSITIONAL: # args
+                if 'args' in data and isinstance(data['args'], list):
+                    positional_args.extend(data['args'])
+            elif param.kind == param.VAR_KEYWORD: # kwargs
+                if 'kwargs' in data and isinstance(data['kwargs'], dict):
+                    keyword_args.update(**data['kwargs'])
 
-            if param.name == 'args':
-                pass
-            elif param.name == 'kwargs':
-                pass
-            elif param.name in data:
-                value = data.pop(param.name)
-                init_args.append(value)
-
-        obj.__init__(*init_args)
+        obj.__init__(*positional_args, **keyword_args)
     return obj
