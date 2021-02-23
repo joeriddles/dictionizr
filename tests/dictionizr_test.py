@@ -3,6 +3,8 @@ from typing import Optional
 
 from dictionizr import dictionize, undictionize
 
+from .utils import eq
+
 
 class Data():
     name: str
@@ -13,10 +15,7 @@ class Data():
         if sub_name is not None:
             self.data = Data(sub_name)
     def __eq__(self, o: Data) -> bool:
-        return o is not None \
-            and self.name == o.name \
-            and ((self.data is None and o.data is None) or (self.data == o.data)) \
-            and ((self.optional is None and o.optional is None) or (self.optional == o.optional))
+        return eq(self, o)
 
 
 def test__dictionize__property():
