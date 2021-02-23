@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="dictionizr",
-    version="1.0.0",
+    version="1.0.1",
     author="Joseph Riddle",
     author_email="joeriddles10@gmail.com",
     description="A small package to convert custom python objects to dictionaries and back again",
