@@ -1,11 +1,49 @@
 from __future__ import annotations
+from importlib import import_module
 import inspect
-from typing import List, Optional, Set, Tuple, Type, Union
+import re
+from typing import Optional, Type
 from types import SimpleNamespace
 
-Iterables = Union[List, Set, Tuple]
 
-def dictionize(data) -> dict:
+def _find_class_by_name(class_name: str, module_path: Optional[str]):
+    value_class = None
+    match = re.search('.*\[(\w+)\].*', class_name)
+    if match:
+        class_name = match.groups()[0]
+    try:
+        module_ = import_module(module_path)
+    except Exception:
+        pass
+    else:
+        module_members = [
+            (name, member)
+            for name, member
+            in inspect.getmembers(module_)
+        ]
+        module_classes = [
+            (name, member)
+            for name, member
+            in module_members
+            if inspect.isclass(member)
+        ]
+        value_module_classes = [
+            member
+            for name, member
+            in module_classes
+            if name == class_name
+        ]
+        if len(value_module_classes) > 0:
+            value_class = value_module_classes[0]
+
+    return value_class
+
+
+def dictionize(data, omit_none_values: bool=True) -> dict:
+    """
+    Recursively converts obects to dictionaries.
+    Omits values that have `None` by default. This can be overriden by passing `False` to `omit_none_values`
+    """
     if data is None:
         return {}
 
@@ -47,16 +85,26 @@ def dictionize(data) -> dict:
                         new_value.append(sub_value)
                     output[key] = new_value
 
-    output = {
-        key: value
-        for key, value
-        in output.items()
-        if value is not None
-    }
+    if omit_none_values:
+        output = {
+            key: value
+            for key, value
+            in output.items()
+            if value is not None
+        }
     return output
 
 
-def undictionize(data: dict, class_: Optional[Type] = None):
+def undictionize(data: dict, class_: Optional[Type] = None, module_path: Optional[str] = None):
+    """
+    Attempts to create an object of type `class_` and recursively fill in properties.
+    If the function can determine the type hint for a property on the created object, it will
+    attempt to locate that class and set the property to an object of that class. Otherwise,
+    `types.SimpleNamespace` will be used for complex properties. Passing `module_path` will
+    help locate the module that contains the class(es). `module_path` can be omitted if `class_`
+    has no properties that are other custom types, or if you do not need to use any methods on
+    the properties of custom types.
+    """
     data = data.copy()
     if data is None:
         return None
@@ -79,6 +127,14 @@ def undictionize(data: dict, class_: Optional[Type] = None):
         for param in init_parameters.values():
             if param.name == 'self':
                 continue
+
+            if param.annotation is not inspect.Signature.empty:
+                param_class = _find_class_by_name(param.annotation, module_path)
+                if param_class is not None:
+                    param_value = data.get(param.name, None)
+                    if param_value is not None:
+                        new_param_value = undictionize(param_value, param_class)
+                        data[param.name] = new_param_value
 
             # See: https://docs.python.org/3/library/inspect.html#inspect.Parameter.kind
             if param.kind == param.POSITIONAL_OR_KEYWORD or param.kind == param.POSITIONAL_ONLY:

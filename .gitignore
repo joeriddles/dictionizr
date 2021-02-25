@@ -1,6 +1,7 @@
 # Custom
 pytest_token*
 .vscode
+playground/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
