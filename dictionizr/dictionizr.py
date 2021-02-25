@@ -1,7 +1,9 @@
 from __future__ import annotations
 import inspect
-from typing import Optional, Type
+from typing import List, Optional, Set, Tuple, Type, Union
 from types import SimpleNamespace
+
+Iterables = Union[List, Set, Tuple]
 
 def dictionize(data) -> dict:
     if data is None:
@@ -20,8 +22,30 @@ def dictionize(data) -> dict:
     for key, value in output.items():
         if hasattr(value, '__dict__'):
             output[key] = dictionize(value)
-        elif isinstance(value, tuple):
-            output[key] = list(value)
+        elif isinstance(value, dict):
+            new_value = {}
+            for sub_key, sub_value in value.items():
+                if hasattr(sub_value, '__dict__'):
+                    sub_value = dictionize(sub_value)
+                new_value[sub_key] = sub_value
+            output[key] = new_value
+        elif not isinstance(value, str):
+            try:
+                for sub_value in value:
+                    # we break to keep only the logic we're checking for a TypeError in the current scope
+                    # `else` will handle the logic if the `value` is iterable
+                    break
+            except TypeError:
+                pass
+            else:
+                new_value = []
+                for sub_value in value:
+                    if hasattr(sub_value, '__dict__'):
+                        sub_value = dictionize(sub_value)
+                        new_value.append(sub_value)
+                    else:
+                        new_value.append(sub_value)
+                    output[key] = new_value
 
     output = {
         key: value
@@ -71,4 +95,5 @@ def undictionize(data: dict, class_: Optional[Type] = None):
                     keyword_args.update(**data['kwargs'])
 
         obj.__init__(*positional_args, **keyword_args)
+
     return obj
