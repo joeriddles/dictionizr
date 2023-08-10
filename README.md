@@ -70,6 +70,9 @@ print(data.name)
 
 ### `undictionize` complex object
 ```python
+from __future__ import annotations
+from typing import Optional
+
 from dictionizr import undictionize
 
 
